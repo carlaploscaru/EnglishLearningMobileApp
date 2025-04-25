@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import NavigationBar from "../components/NavigationBar";
 import XPpage from "../components/XP";
 import LinearGradient from "react-native-linear-gradient";
+import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 
 const API_URL = 'https://6cuc3m1qz4.execute-api.eu-central-1.amazonaws.com/getLevels/';
 
@@ -19,6 +20,8 @@ const LevelsPage = ({ route, navigation }) => {
   const { categoryKey, categoryName } = route.params || {};
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userProgress, setUserProgress] = useState(null);
+  
 
   const fetchLevels = async () => {
     try {
@@ -44,12 +47,76 @@ const LevelsPage = ({ route, navigation }) => {
     }
   };
 
+ 
+  const fetchUserProgress = async () => {
+    try {
+      // const user = await getCurrentUser();
+      // const userId = user.username;
+      const { userId } = await getCurrentUser();
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken?.toString();
 
+      const response = await fetch(`https://xbq4gmvb0e.execute-api.eu-central-1.amazonaws.com/UserDetails/settings?user_id=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'AuthorizationPusDeMine': `Bearer ${idToken}`,
+        },
+      });
 
+        const raw = await response.json();
+        const data = typeof raw.body === 'string' ? JSON.parse(raw.body) : raw;
 
+        console.log("cevaaaaaaa",data)
+        setUserProgress(data); 
+    //   const data = await res.json();
+    //   const parsed = JSON.parse(data.body);
+    //   console.log("cevaaaaaaa",parsed)
+    //  setUserProgress(data.body); 
+    } catch (err) {
+      console.error("Failed to fetch user progress:", err);
+    }finally {
+      setLoading(false);
+    }
+  };
+
+//////////////////////////////////////////////////////
+  // useEffect(() => {
+  //   const fetchUserDetails = async () => {
+  //     try {
+  //       const { userId } = await getCurrentUser();
+  //       const session = await fetchAuthSession();
+  //       const idToken = session.tokens?.idToken?.toString();
+
+  //       const response = await fetch(`${API_URL}?user_id=${userId}`, {
+  //         method: 'GET',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'AuthorizationPusDeMine': `Bearer ${idToken}`,
+  //         },
+  //       });
+
+  //       const raw = await response.json();
+  //       const data = typeof raw.body === 'string' ? JSON.parse(raw.body) : raw;
+
+  //       setUserData(data);
+  //       setUpdatedName(data.name);
+  //       setUpdatedBirthdate(data.birthdate);
+  //     } catch (error) {
+  //       console.error('Error fetching user details:', error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchUserDetails();
+  // }, []);
+
+ ////////////////////////////////////////////////////////////////////
 
   useEffect(() => {
     fetchLevels();
+    fetchUserProgress();
   }, []);
 
   const handleLevelPress = (levelId) => {
@@ -58,11 +125,15 @@ const LevelsPage = ({ route, navigation }) => {
       levelId,
     });
   };
+  
+
+
+ 
 
   return (
     <NavigationBar>
       <SafeAreaView style={styles.container}>
-        <XPpage />
+        <XPpage/>
         <LinearGradient
           colors={["white", "transparent"]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, height: 40 }}
@@ -72,15 +143,26 @@ const LevelsPage = ({ route, navigation }) => {
         {loading ? (
           <ActivityIndicator color="#fff" size="large" />
         ) : (
-          levels.map((level) => (
-            <TouchableOpacity
-              key={level.id}
-              style={styles.levelButton}
-              onPress={() => handleLevelPress(level.level)}
-            >
-              <Text style={styles.levelText}>{level.lv_name}</Text>
-            </TouchableOpacity>
-          ))
+          levels.map((level) => {
+            const currentLevel = userProgress?.[`current_lv_${categoryKey}`] ?? 0;
+            const isUnlocked = level.level <= currentLevel + 1;
+          
+            return (
+              <TouchableOpacity
+                key={level.id}
+                style={[
+                  styles.levelButton,
+                  !isUnlocked && styles.disabledButton
+                ]}
+                onPress={() => isUnlocked && handleLevelPress(level.level)}
+                disabled={!isUnlocked}
+              >
+                <Text style={[styles.levelText, !isUnlocked && styles.disabledText]}>
+                  {level.lv_name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
         )}
 
         <View style={styles.navContainer}>
@@ -144,6 +226,12 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     color: "#fff",
+  },
+  disabledButton: {
+    backgroundColor: "#ccc", // grey
+  },
+  disabledText: {
+    color: "#888",
   },
 });
 
