@@ -8,6 +8,7 @@ import {
   Animated,
   SafeAreaView,
   Alert,
+  TextInput 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import NavigationBar from "../components/NavigationBar";
@@ -34,6 +35,7 @@ const GamePage = ({ route, navigation }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [levelName, setLevelName] = useState(0);
+  const [userInput, setUserInput] = useState('');
   
 
   useEffect(() => {
@@ -118,7 +120,13 @@ const GamePage = ({ route, navigation }) => {
     if (!currentQuestion || selectedAnswer !== null) return;
 
     setSelectedAnswer(answer);
-    const isCorrect = answer === currentQuestion.correctAnswer;
+    let isCorrect = false;
+
+  if (currentQuestion.type === "fill-in") {
+    isCorrect = answer.trim().toLowerCase() === currentQuestion.answerSentence.trim().toLowerCase();
+  } else if (currentQuestion.type === "multiple-choice") {
+    isCorrect = answer === currentQuestion.correctAnswer;
+  }
     setAnswerStatus(isCorrect ? 'correct' : 'wrong');
 
     if (isCorrect) {
@@ -131,7 +139,7 @@ const GamePage = ({ route, navigation }) => {
         const next = current + 1;
         if (next >= questions.length) {
           setModalVisible(true);
-          ////////////////////////////////////////////////////////////////////////////////////
+          
       const sendProgressUpdate = async () => {
         try {
           const user = await getCurrentUser();
@@ -152,7 +160,7 @@ const GamePage = ({ route, navigation }) => {
     
       sendProgressUpdate();
 
-////////////////////////////////////////////////////////////////////////////
+
         } else {
           setCurrent(next);
           spawnStar();
@@ -220,16 +228,24 @@ const GamePage = ({ route, navigation }) => {
             <Ionicons name="star" size={240} color="#0000FF" style={styles.bigStar} />
 
           
-            {showQuestion && questions[current] && questions[current].type=="fill-in" && (
+            {showQuestion && questions[current] && questions[current].type === "fill-in" && (
               <View style={styles.questionWrapper}>
                 <Text style={styles.wordInsideStar}>{questions[current].sentence}</Text>
-                {questions[current].answerSentence==1 &&(
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => handleAnswer(a)}
-                  >
-                  </TouchableOpacity>
-                )}
+
+                <TextInput
+                  style={styles.input}
+                  value={userInput}
+                  onChangeText={setUserInput}
+                  placeholder="Type your answer..."
+                  placeholderTextColor="#ccc"
+                />
+
+                <TouchableOpacity
+                  onPress={() => handleAnswer(userInput)}
+                  style={styles.submitButton}
+                >
+                  <Text style={styles.submitButtonText}>Submit</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -339,6 +355,29 @@ const styles = StyleSheet.create({
   answerText: {
     fontSize: 16,
     color: "#333",
+  },
+  input: {
+    borderWidth: 2,
+    borderColor: "black",
+    padding: 10,
+    marginVertical: 10,
+    borderRadius: 8,
+    width: "100%",
+    backgroundColor: "white",
+    color: "#333",
+    fontSize: 16,
+  },
+  submitButton: {
+    backgroundColor: "#4caf50",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  submitButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 

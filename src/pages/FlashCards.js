@@ -11,7 +11,7 @@ const FlashcardsPage = ({ navigation }) => {
         style={styles.button}
         onPress={() => navigation.navigate("UnlockedCards")}
       >
-        <Text style={styles.buttonText}>Unlocked Cards</Text>
+        <Text style={styles.buttonText}>Study Cards</Text>
       </TouchableOpacity>
     </SafeAreaView>
     </NavigationBar>

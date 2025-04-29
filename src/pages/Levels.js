@@ -12,6 +12,7 @@ import NavigationBar from "../components/NavigationBar";
 import XPpage from "../components/XP";
 import LinearGradient from "react-native-linear-gradient";
 import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { useFocusEffect } from "@react-navigation/native";
 
 const API_URL = 'https://6cuc3m1qz4.execute-api.eu-central-1.amazonaws.com/getLevels/';
 
@@ -69,10 +70,6 @@ const LevelsPage = ({ route, navigation }) => {
 
         console.log("cevaaaaaaa",data)
         setUserProgress(data); 
-    //   const data = await res.json();
-    //   const parsed = JSON.parse(data.body);
-    //   console.log("cevaaaaaaa",parsed)
-    //  setUserProgress(data.body); 
     } catch (err) {
       console.error("Failed to fetch user progress:", err);
     }finally {
@@ -80,44 +77,14 @@ const LevelsPage = ({ route, navigation }) => {
     }
   };
 
-//////////////////////////////////////////////////////
-  // useEffect(() => {
-  //   const fetchUserDetails = async () => {
-  //     try {
-  //       const { userId } = await getCurrentUser();
-  //       const session = await fetchAuthSession();
-  //       const idToken = session.tokens?.idToken?.toString();
 
-  //       const response = await fetch(`${API_URL}?user_id=${userId}`, {
-  //         method: 'GET',
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           'AuthorizationPusDeMine': `Bearer ${idToken}`,
-  //         },
-  //       });
 
-  //       const raw = await response.json();
-  //       const data = typeof raw.body === 'string' ? JSON.parse(raw.body) : raw;
-
-  //       setUserData(data);
-  //       setUpdatedName(data.name);
-  //       setUpdatedBirthdate(data.birthdate);
-  //     } catch (error) {
-  //       console.error('Error fetching user details:', error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchUserDetails();
-  // }, []);
-
- ////////////////////////////////////////////////////////////////////
-
-  useEffect(() => {
+ useFocusEffect(
+  React.useCallback(() => {
     fetchLevels();
     fetchUserProgress();
-  }, []);
+  }, [])
+);
 
   const handleLevelPress = (levelId) => {
     navigation.navigate("GamePage", {
@@ -145,7 +112,9 @@ const LevelsPage = ({ route, navigation }) => {
         ) : (
           levels.map((level) => {
             const currentLevel = userProgress?.[`current_lv_${categoryKey}`] ?? 0;
-            const isUnlocked = level.level <= currentLevel + 1;
+            const isUnlocked = level.level <= currentLevel;
+
+            
           
             return (
               <TouchableOpacity
