@@ -1,41 +1,66 @@
-import React, { useState } from "react";
-import {View, Text, SafeAreaView, StyleSheet, FlatList, Image} from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, SafeAreaView, StyleSheet, FlatList, Image, ActivityIndicator } from "react-native";
 import NavigationBar from "../components/NavigationBar";
+import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 
-// Dummy data — replace with AWS data later
-const leaderboardData = [
-  { id: "1", username: "user123", xp: 200 },
-  { id: "2", username: "user124", xp: 170 },
-  { id: "3", username: "user1253", xp: 100 },
-  { id: "4", username: "user43", xp: 80 },
-  { id: "5", username: "user1289", xp: 20 },
-];
+const API_URL = 'https://bfm90gdjx9.execute-api.eu-central-1.amazonaws.com/getSortedUsers';
 
 const LeaderboardPage = ({ navigation }) => {
-  const userPlacement = 2; // You can compute this dynamically later
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userPlacement, setUserPlacement] = useState(null);
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      const { userId } = await getCurrentUser();
+      try {
+        const response = await fetch(`${API_URL}`); 
+        const data = await response.json();
+        console.log("xxxxxxxxxxxxxxxx", data)
+        
+        const parsedBody = JSON.parse(data.body);
+        setLeaderboardData(parsedBody);
+
+        const index = parsedBody.findIndex((user) => user.user_id === userId);
+        if (index !== -1) {
+          setUserPlacement(index + 1);
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch leaderboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
+  }, []);
 
   return (
     <NavigationBar navigation={navigation} currentRoute="Home">
       <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Leaderboard Page</Text>
-        <Image
-          source={require("../utils/trofe.png")} // ← save your uploaded image here
-          style={styles.trophyImage}
-        />
-        <Text style={styles.placementText}>Your placement is #{userPlacement}</Text>
+        <Text style={styles.title}>Leaderboard Page</Text>
+        <Image source={require("../utils/trofe.png")} style={styles.trophyImage} />
+        <Text style={styles.placementText}>
+          {userPlacement ? `Your placement is #${userPlacement}` : "You are not ranked"}
+        </Text>
 
         <View style={styles.leaderboard}>
-          <FlatList
-            data={leaderboardData}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => (
-              <View style={styles.row}>
-                <Text style={styles.cell}>{index + 1}</Text>
-                <Text style={styles.cell}>{item.username}</Text>
-                <Text style={styles.cell}>{item.xp}XP</Text>
-              </View>
-            )}
-          />
+          {loading ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : (
+            <FlatList
+              data={leaderboardData}
+              keyExtractor={(item) => item.user_id}
+              renderItem={({ item, index }) => (
+                <View style={styles.row}>
+                  <Text style={styles.cell}>{index + 1}</Text>
+                  <Text style={styles.cell}>{item.name}</Text>
+                  <Text style={styles.cell}>{item.current_xp} XP</Text>
+                </View>
+              )}
+            />
+          )}
         </View>
       </SafeAreaView>
     </NavigationBar>
@@ -46,7 +71,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    top:50
+    top: 50
   },
   title: {
     fontSize: 30,
